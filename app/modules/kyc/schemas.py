@@ -142,3 +142,137 @@ class KYCApplicationDetail(BaseModel):
     updated_at: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# =====================================================================
+# Complete KYC Form Payload Models (Matching Frontend React Schema)
+# =====================================================================
+
+class PersonalInfoPayload(BaseModel):
+    fullName: str = Field(..., min_length=1, max_length=128)
+    dateOfBirth: str = Field(..., max_length=32)
+    nationality: str | None = Field(default="")
+    residencyStatus: str | None = Field(default="")
+    fathersName: str | None = None
+    mothersName: str | None = None
+    spouseName: str | None = None
+    gender: str | None = None
+    maritalStatus: str | None = None
+
+
+class ContactInfoPayload(BaseModel):
+    mobile: str = Field(..., min_length=5, max_length=32)
+    email: str = Field(..., min_length=3, max_length=128)
+
+
+class AddressInfoPayload(BaseModel):
+    line1: str = Field(default="", max_length=256)
+    line2: str | None = None
+    locality: str | None = None
+    city: str = Field(default="", max_length=128)
+    stateRegion: str = Field(default="", max_length=128)
+    postalCode: str = Field(default="", max_length=32)
+    country: str = Field(default="IN", max_length=64)
+
+
+class AddressSectionPayload(BaseModel):
+    residential: AddressInfoPayload
+    permanentSameAsResidential: bool = True
+    permanent: AddressInfoPayload | None = None
+
+
+class DocumentUploadPayload(BaseModel):
+    documentType: str = Field(default="pan", max_length=32)
+    documentNumber: str = Field(default="", max_length=64)
+    issuingAuthority: str | None = None
+    issuingCountry: str | None = None
+    issueDate: str | None = None
+    expiryDate: str | None = None
+    frontImageRef: str | None = None
+    backImageRef: str | None = None
+    frontImagePreview: str | None = None  # Base64 data URL
+    backImagePreview: str | None = None   # Base64 data URL
+
+
+class AntiSpoofResultPayload(BaseModel):
+    isReal: bool = True
+    status: str = Field(default="real")  # 'real' | 'spoof' | 'uncertain' | 'unavailable'
+    confidencePercent: float = 99.0
+    logitDiff: float = 0.0
+
+
+class BiometricVisionResultPayload(BaseModel):
+    sessionId: str | None = None
+    livenessPassed: bool = True
+    prediction: str | None = None
+    scorePercent: float | None = None
+    eyeClosed: bool | None = None
+    faceCenter: bool | None = None
+    faceDirection: str | None = None
+    failureReason: str | None = None
+    facePhoto: str | None = None
+    verifiedAt: str | None = None
+    mode: str = "live"
+    verifiedBy: str | None = None
+    activeChallengesCompleted: list[str] = Field(default_factory=list)
+    antiSpoofResult: AntiSpoofResultPayload | None = None
+    videoEvidenceUrl: str | None = None
+    videoEvidenceFileName: str | None = None
+
+
+class BiometricInfoPayload(BaseModel):
+    selfieRef: str | None = None
+    selfiePreview: str | None = None  # Base64 data URL
+    livenessMode: str = Field(default="simulated")
+    livenessStatus: str | None = None
+    livenessProvider: str | None = None
+    visionResult: BiometricVisionResultPayload | None = None
+    consentGiven: bool = True
+
+
+class DeclarationInfoPayload(BaseModel):
+    occupation: str | None = None
+    natureOfBusiness: str | None = None
+    sourceOfFunds: str | None = None
+    pepDeclaration: str | None = "no"
+    accuracyConsent: bool = True
+    privacyConsent: bool = True
+    verificationConsent: bool = True
+
+
+class FullKYCApplicationPayload(BaseModel):
+    personal: PersonalInfoPayload
+    contact: ContactInfoPayload
+    address: AddressSectionPayload
+    document: DocumentUploadPayload
+    biometric: BiometricInfoPayload
+    declarations: DeclarationInfoPayload
+    submissionStatus: str | None = "idle"
+    submissionError: str | None = None
+    device_fingerprint: str | None = None
+    client_metadata: dict[str, Any] | None = None
+
+
+class VerificationCheckItem(BaseModel):
+    name: str
+    status: str  # 'passed' | 'failed' | 'pending' | 'not_checked' | 'not_available' | 'simulated'
+    explanation: str
+    evidence: str | None = None
+
+
+class VerificationResultResponse(BaseModel):
+    applicationRef: str
+    submittedAt: str
+    outcome: str  # 'verified' | 'review_required' | 'high_risk' | 'processing' | 'unable_to_complete'
+    overallRiskScore: float | int | None = 0
+    checks: list[VerificationCheckItem] = Field(default_factory=list)
+    riskIndicators: list[str] = Field(default_factory=list)
+    mismatches: list[str] = Field(default_factory=list)
+    recommendedAction: str | None = None
+
+
+class SubmitApplicationResponse(BaseModel):
+    applicationRef: str
+    submittedAt: str
+    result: VerificationResultResponse | None = None
+

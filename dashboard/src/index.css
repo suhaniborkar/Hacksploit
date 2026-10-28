@@ -1,0 +1,17 @@
+/* VeriYID Dashboard Global Reset & Typography Scaling */
+html {
+  /* Exactly 15% text reduction across all rem units globally */
+  font-size: 85%;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}

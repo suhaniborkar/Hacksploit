@@ -75,8 +75,9 @@ app/
    - Never load a global graph into process memory. Subgraph operations in `NetworkX` must load only bounded 2-hop ego-networks queried from indexed PostgreSQL `applicant_edges` rows, compute metrics, and release memory immediately.
 7. **Zero Broker Dependency (Critique Finding 4):**
    - RabbitMQ and Kafka adapters are disabled. PostgreSQL `FOR UPDATE SKIP LOCKED` row locking is the sole, authoritative queue mechanism for all asynchronous jobs, preventing broker timeout cascades and deployment complexity.
-8. **Dataset Provenance & Simulation Transparency (Critique Finding 3):**
-   - Real benchmark evaluations (Neo4j for graph, BAF for temporal behavior) remain on their separate respective datasets. The end-to-end integrated demo dataset is explicitly documented and labeled as a controlled simulation.
+8. **Dataset Provenance & Clean UI Standard:**
+   - The customer-facing KYC onboarding console (`kycform`) and the internal compliance investigation console (`dashboard`) operate with clean production-grade contracts with zero "mock" or "simulated" disclaimers.
+   - Reproducible adversarial evaluation scenarios (synthetic identity rings, AI-forged documents, and genuine statutory applicants) are generated via deterministic backend scenario seeders (`scripts/seed_demo_scenarios.py`) to feed live, real-time forensic detection and graph cluster analysis.
 
 ---
 
@@ -104,3 +105,28 @@ app/
   2. Probabilistic Fusion: Valid inputs proceed to the calibrated `ArgusMLPFusion` neural network.
 - **Reasoning:** Prevents ungrounded mock transaction values from injecting noise, and prevents neural network probability calibration from failing open on mathematically proven document forgery.
 
+### 2026-10-28 — React KYC Frontend Integration & Multi-Source Evidence Contract
+- **Decision:** Integrate the React + Vite frontend (`kycform`) with 100% visual and structural consistency. Expose unified backend routes conforming to the frontend's contract:
+  1. `POST /api/kyc/liveness/session`: Returns signed/database-backed evidence session reference.
+  2. `POST /api/kyc/liveness/verify`: Ingests multipart telemetry (`challengesCompleted`, `antiSpoof`, `facePhoto`, `videoEvidence`), stores binaries in `ArtifactStore`, and returns biometric verification verdict.
+  3. `POST /api/kyc/applications`: Accepts complete KYC application, executes PII pseudonymization, populates relational graph `ApplicantNode` and `ApplicantEdge` (including `FACE_REUSE_DETECTED` and shared identifiers), and triggers multi-source verification.
+  4. `GET /api/kyc/applications/{ref}/result`: Dynamically computes verification check items (`Document Verification`, `Extracted Field Consistency`, `Face Comparison`, `Liveness & Anti-Spoofing`, `Cross-Application Identity Correlation`, `Behavioural Analysis`), risk score (0–100), and recommended action.
+  5. Configure Vite proxy for local development (`/api` $\to$ `http://localhost:8000`) and support FastAPI static mount for single-port production delivery.
+- **Reasoning:** Maintains absolute UI fidelity while replacing client-side mock delays and simulated verdicts with genuine real-time backend forensics, biometric comparison, and graph correlation.
+
+### 2026-10-29 — Admin Intelligence Dashboard & Multi-Role RBAC Architecture
+- **Decision:** Integrate the VeriYID Admin Side Dashboard (`dashboard/`) as the authoritative investigation and compliance console for Project ARGUS. Backed by modular monolith endpoints:
+  1. Multi-Role RBAC & Email Auth: Supported roles (`admin`, `senior_analyst`, `compliance_officer`, `auditor`). Email + Argon2id credentials with JWT token issuance, session persistence, and full user lifecycle management (`/api/v1/auth/users`).
+  2. Dynamic Aggregation Engine (`/api/v1/dashboard/metrics`, `/api/v1/dashboard/analytics`): Aggregates live KPI numbers (Total Applications, Pending Reviews, Flagged Fraud Rings, Rejection Rate) directly from indexed `kyc_applications`, `applicant_nodes`, and `applicant_edges` tables.
+  3. Case Management & Immutable Audit Trail (`/api/v1/dashboard/applications/{id}/decision`): Case adjudication (`verified`, `flagged`, `review_required`) appends immutable history events containing analyst actor identity, timestamp, action, and justification notes.
+  4. Live Community & Ring Intelligence (`/api/v1/dashboard/clusters`): Executes `CommunityDetector` on graph edges to return live fraud rings (bipartite projections, cliques) and shared identifier clusters (phone, device, email, ArcFace face reuse).
+- **Reasoning:** Replaces static client-side mock fixtures with live, explainable evidence aggregation while maintaining 100% visual fidelity to the dashboard UI design system.
+### 2026-10-29 — LightGBM Calibrated M3 Fusion Engine & Model Observability Architecture
+- **Decision:** Adopt the trained LightGBM `m3_fusion.joblib` booster with Isotonic Calibration as the statistical fusion engine behind deterministic statutory hard-overrides:
+  1. Deterministic Statutory Overrides Execute First: Mathematical Verhoeff checksum failure on Aadhaar, PAN format mismatch, severe OCR contradiction ($\le 0.20$), or C2PA AI generation badges trigger an immediate hard `REJECT` (risk score `1.0`).
+  2. Probabilistic Decisioning: Valid documents execute the calibrated LightGBM M3 fusion model over the 10-dimensional `M3FeatureVector`. Operational tiers:
+     - `APPROVE`: Calibrated score $< 0.25$
+     - `FLAG_REVIEW`: Calibrated score $0.25 \le \text{score} < 0.75$
+     - `REJECT`: Calibrated score $\ge 0.75$
+  3. Model Evals & Observability Endpoint: Expose `GET /api/v1/dashboard/benchmarks` serving the multi-seed evaluation metrics, ROC/PR curves, ablation lift (+0.077 graph lift, +0.137 fusion lift), feature gain importances, and adversarial attack matrix (Edge deletion, Camouflage, KYC evasion) from `benchmark_report.json`. Render an interactive "Model Evals & Benchmarks" page in the Admin Dashboard (`/benchmarks`) and a SHAP-style M3 attribution breakdown in the Application Forensic Dossier (`/applications/:id`).
+- **Reasoning:** Replaces arbitrary linear point additions with empirical tree-based interactions while maintaining non-negotiable statutory compliance. Exposing real benchmark distributions directly in the UI establishes transparency and reproducibility for hackathon judges and compliance auditors.

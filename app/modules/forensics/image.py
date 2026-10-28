@@ -475,81 +475,26 @@ def compute_fft_spectral_analysis(image_bytes: bytes) -> TamperingSignal:
         )
 
 
-def compute_face_embedding_similarity(
-    doc_face_features: list[float] | bytes | None,
-    selfie_face_features: list[float] | bytes | None,
-    similarity_threshold: float = 0.65,
-) -> TamperingSignal:
-    """
-    Computes cosine similarity between document face crop and live selfie biometric features.
-    If biometric features are missing, explicitly returns EvidenceStatus.UNAVAILABLE per ARCHITECTURE.md §3.
-    """
-    if doc_face_features is None or selfie_face_features is None:
-        return TamperingSignal(
-            signal_name="face_consistency",
-            status=EvidenceStatus.UNAVAILABLE,
-            details={"reason": "Biometric face crop or feature vector unavailable."},
-        )
-
-    # Convert image bytes or vectors to normalized float arrays
-    try:
-        if isinstance(doc_face_features, bytes):
-            img_doc = _load_image(doc_face_features).convert("L").resize((64, 64))
-            vec_doc = np.array(img_doc, dtype=np.float32).flatten()
-        else:
-            vec_doc = np.array(doc_face_features, dtype=np.float32)
-
-        if isinstance(selfie_face_features, bytes):
-            img_selfie = _load_image(selfie_face_features).convert("L").resize((64, 64))
-            vec_selfie = np.array(img_selfie, dtype=np.float32).flatten()
-        else:
-            vec_selfie = np.array(selfie_face_features, dtype=np.float32)
-
-        norm_doc = np.linalg.norm(vec_doc)
-        norm_selfie = np.linalg.norm(vec_selfie)
-
-        if norm_doc == 0 or norm_selfie == 0:
-            return TamperingSignal(
-                signal_name="face_consistency",
-                status=EvidenceStatus.UNAVAILABLE,
-                details={"reason": "Zero-magnitude feature vector."},
-            )
-
-        cosine_sim = float(np.dot(vec_doc, vec_selfie) / (norm_doc * norm_selfie))
-        is_match = cosine_sim >= similarity_threshold
-        status = EvidenceStatus.PRESENT if is_match else EvidenceStatus.ANOMALOUS
-
-        return TamperingSignal(
-            signal_name="face_consistency",
-            status=status,
-            score=round(cosine_sim, 4),
-            details={
-                "cosine_similarity": round(cosine_sim, 4),
-                "threshold": similarity_threshold,
-                "faces_match": is_match,
-            },
-        )
-    except Exception as e:
-        return TamperingSignal(
-            signal_name="face_consistency",
-            status=EvidenceStatus.UNAVAILABLE,
-            details={"error": str(e)},
-        )
-
-
 def run_slow_plane_forensics(
     document_bytes: bytes,
     selfie_bytes: bytes | None = None,
 ) -> dict[str, TamperingSignal]:
     """
-    Executes slow-plane forensic tasks (ELA, FFT, face embedding similarity) during asynchronous worker jobs.
+    Executes slow-plane forensic tasks (ELA, FFT, ArcFace face consistency)
+    during asynchronous worker jobs.
+
+    Face comparison now uses InsightFace buffalo_sc ArcFace embeddings (512-d)
+    via app.modules.forensics.face. The old 64×64 pixel cosine similarity path
+    has been removed — it produced unreliable signals (Task 3.4).
     """
+    from app.modules.forensics.face import compare_face_embeddings
+
     signals = {
         "error_level_analysis": compute_error_level_analysis(document_bytes),
         "fft_spectral_analysis": compute_fft_spectral_analysis(document_bytes),
     }
     if selfie_bytes:
-        signals["face_consistency"] = compute_face_embedding_similarity(document_bytes, selfie_bytes)
+        signals["face_consistency"] = compare_face_embeddings(document_bytes, selfie_bytes)
     else:
         signals["face_consistency"] = TamperingSignal(
             signal_name="face_consistency",

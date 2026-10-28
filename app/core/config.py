@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         "image/webp",
         "application/pdf",
     ]
+    chroma_persist_dir: str = "artifacts_data/chroma_face_db"
 
     # Identity & JWT Authentication
     auth_jwt_secret: str = "argus_jwt_secret_dev_only_min_32_chars_abcdef123456"

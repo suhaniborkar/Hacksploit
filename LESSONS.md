@@ -44,6 +44,11 @@ a gap to fill.
 
 ---
 
+## Normalizing float probabilities to integer risk scores requires explicit percentage scaling
+- What happened: ML models in M0–M3 output calibrated risk probabilities in `[0.0, 1.0]`, while frontend dashboards display integer scores `0–100`. Rounding `raw_score` directly (`round(raw_score)`) collapsed all probabilities to 0 or 1, erroneously mapping a critical 0.88 fraud score to level 'low'.
+- Takeaway: Always check scale bounds before rounding: `score_pct = raw_score * 100.0 if raw_score <= 1.0 else raw_score` before casting to integer percentiles.
+- Applies to: API serializers, dashboard metric transforms, risk thresholding.
+
 ## JPEG quantization table scaling reveals exact original export quality without image decoding
 - What happened: Evaluating JPEG compression artifacts required detecting whether an image came from standard AI generator pipelines (which export at round integer qualities like 90, 95, 100) versus authentic mobile camera optical sensors.
 - Takeaway: Standard ITU-T T.81 luminance quantization tables scale linearly with quality ($S = 200 - 2Q$ for $Q \ge 50$). By computing the average ratio of an image's loaded quantization table against the baseline table, the exact software export quality can be reversed in < 1ms without decompressing pixel buffers.

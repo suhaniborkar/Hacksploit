@@ -9,15 +9,34 @@ from app.core.config import settings
 from app.core.errors import PlatformError, platform_error_handler, unexpected_error_handler
 from app.infrastructure.database import check_database_connection
 from app.modules.identity.router import router as identity_router
+from app.modules.investigation import dashboard_router
 from app.modules.kyc.router import router as kyc_router
 from app.modules.products.router import router as products_router
 
+from contextlib import asynccontextmanager
+
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from app.infrastructure.database import Base, SessionLocal, engine
+        from app.modules.identity.seed import seed_default_staff
+
+        Base.metadata.create_all(bind=engine)
+        with SessionLocal() as db:
+            seed_default_staff(db)
+    except Exception as exc:
+        logger.warning(f"Startup initialization notice: {exc}")
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
     description="ARGUS: Synthetic Identity Fraud Detection Modular Monolith Platform",
+    lifespan=lifespan,
 )
 
 # Exception handlers
@@ -30,6 +49,14 @@ async def request_context_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", "")[:100] or uuid.uuid4().hex
     request.state.request_id = request_id
     started = time.monotonic()
+
+    # Seamless routing: if JSON application is POSTed to /applications, route to /applications/full
+    if (
+        request.method == "POST"
+        and request.url.path in ("/api/kyc/applications", "/api/v1/kyc/applications")
+        and "application/json" in request.headers.get("content-type", "")
+    ):
+        request.scope["path"] = request.scope["path"] + "/full"
 
     response = await call_next(request)
 
@@ -50,8 +77,13 @@ async def request_context_middleware(request: Request, call_next):
 
 # Route composition
 app.include_router(identity_router, prefix="/api/v1")
+app.include_router(identity_router, prefix="/api")
 app.include_router(kyc_router, prefix="/api/v1")
+app.include_router(kyc_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api")
 app.include_router(products_router)
+
 
 
 @app.get("/health/live")

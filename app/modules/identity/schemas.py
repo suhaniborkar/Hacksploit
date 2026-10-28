@@ -45,9 +45,33 @@ class UserView(BaseModel):
 
     id: uuid.UUID
     email: str
+    name: str | None = None
     role: str
     is_active: bool
     created_at: datetime
+    last_login_at: datetime | None = None
+
+
+class DashboardUserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+    status: str
+    lastLogin: str
+    createdAt: str
+
+
+class UserCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=128)
+    email: str = Field(min_length=3, max_length=320)
+    role: str = Field(default="reviewer")
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def clean_email(cls, v: str) -> str:
+        return validate_email_format(v)
 
 
 class AuthTokens(BaseModel):
@@ -81,6 +105,16 @@ class RoleUpdate(BaseModel):
     @field_validator("role")
     @classmethod
     def valid_role(cls, v: str) -> str:
-        if v not in {"user", "analyst", "admin"}:
-            raise ValueError("Role must be 'user', 'analyst', or 'admin'.")
+        allowed = {
+            "user",
+            "analyst",
+            "senior_analyst",
+            "reviewer",
+            "compliance_officer",
+            "viewer",
+            "auditor",
+            "admin",
+        }
+        if v not in allowed:
+            raise ValueError(f"Role must be one of: {allowed}")
         return v

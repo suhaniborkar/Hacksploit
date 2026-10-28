@@ -11,10 +11,7 @@ from PIL import Image
 
 from app.core.forensics import EvidenceStatus, TamperingSignal
 from app.modules.forensics.ocr import (
-    compare_dobs,
-    name_similarity_ratio,
     normalize_dob_string,
-    validate_pan_format,
     validate_verhoeff,
 )
 
@@ -100,6 +97,7 @@ class DocumentFeatureReport:
     ai_risk_score: float = 0.0
     ai_forensic_reasons: list[str] = field(default_factory=list)
     tampering_signals: dict[str, TamperingSignal] = field(default_factory=dict)
+    extracted_face_preview: str | None = None
 
     # Extracted OCR text snippet for full transparency
     raw_ocr_tokens: list[str] = field(default_factory=list)
@@ -127,6 +125,7 @@ class DocumentFeatureReport:
             "qr_decodable": self.qr_decodable,
             "qr_analysis": self.qr_analysis,
             "photo_box_detected": self.photo_box_detected,
+            "extracted_face_preview": self.extracted_face_preview,
             "is_ai_generated": self.is_ai_generated,
             "ai_risk_score": round(self.ai_risk_score, 2),
             "ai_forensic_reasons": self.ai_forensic_reasons,
@@ -148,6 +147,7 @@ class DynamicDocumentExtractor:
         filename: str = "",
         claimed_name: str | None = None,
         claimed_dob: str | None = None,
+        claimed_id_number: str | None = None,
     ) -> DocumentFeatureReport:
         from app.modules.forensics.image import run_fast_plane_forensics
 
@@ -222,7 +222,15 @@ class DynamicDocumentExtractor:
             ai_risk_score = max(ai_risk_score, 0.75)
             ai_reasons.append("Visual Pseudo-QR hallucination (zero decodable bits)")
 
-        # 5. Dynamic Document Classification & Field Parsing
+        # 5. Extract face crop from the document if present
+        extracted_face_preview: str | None = None
+        try:
+            from app.modules.forensics.face import extract_face_crop_data_url
+            extracted_face_preview = extract_face_crop_data_url(image_bytes)
+        except Exception as e:
+            logger.debug("Face crop extraction skipped: %s", e)
+
+        # 6. Dynamic Document Classification & Field Parsing
         report = self._classify_and_parse(
             ocr_lines=ocr_lines,
             full_text=full_ocr_text,
@@ -239,6 +247,8 @@ class DynamicDocumentExtractor:
             tampering_signals=tampering_signals,
             claimed_name=claimed_name,
             claimed_dob=claimed_dob,
+            claimed_id_number=claimed_id_number,
+            extracted_face_preview=extracted_face_preview,
         )
 
         return report
@@ -260,6 +270,8 @@ class DynamicDocumentExtractor:
         tampering_signals: dict[str, TamperingSignal],
         claimed_name: str | None = None,
         claimed_dob: str | None = None,
+        claimed_id_number: str | None = None,
+        extracted_face_preview: str | None = None,
     ) -> DocumentFeatureReport:
         lower_name = filename.lower()
         upper_text = full_text.upper()
@@ -529,6 +541,14 @@ class DynamicDocumentExtractor:
             checksum_valid = False
             checksum_details = "Non-statutory card: does not contain an Indian government identity number."
 
+        # Cross-validate claimed ID number against extracted ID number
+        if claimed_id_number and id_number:
+            clean_claimed = re.sub(r"\D", "", claimed_id_number).upper()
+            clean_extracted = re.sub(r"\D", "", id_number).upper()
+            if clean_claimed and clean_extracted and clean_claimed != clean_extracted:
+                ai_risk_score = max(ai_risk_score, 0.95)
+                ai_reasons.append(f"Contradiction: Claimed document number '{claimed_id_number}' does not match number extracted from card '{id_number}'")
+
         # Final KYC Verdict
         is_statutory = best_type in (DocumentType.AADHAAR_CARD, DocumentType.PAN_CARD, DocumentType.DRIVING_LICENCE, DocumentType.PASSPORT)
 
@@ -564,6 +584,7 @@ class DynamicDocumentExtractor:
             qr_decodable=qr_decodable,
             qr_analysis=qr_analysis,
             photo_box_detected=True,
+            extracted_face_preview=extracted_face_preview,
             is_ai_generated=is_ai or (ai_risk_score >= 0.70),
             ai_risk_score=ai_risk_score,
             ai_forensic_reasons=ai_reasons,

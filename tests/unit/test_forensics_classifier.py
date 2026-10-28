@@ -4,7 +4,6 @@ import pytest
 from PIL import Image, ImageDraw
 
 from app.modules.forensics.classifier import (
-    DocumentFeatureReport,
     DocumentType,
     DynamicDocumentExtractor,
 )

@@ -37,6 +37,7 @@ def issue_access_token(user: User, now: datetime | None = None) -> tuple[str, da
     payload = {
         "sub": str(user.id),
         "email": user.email,
+        "name": user.name or user.email.split("@")[0].title(),
         "role": user.role,
         "iss": settings.auth_jwt_issuer,
         "aud": settings.auth_jwt_audience,
@@ -145,6 +146,17 @@ def current_principal(
     raise PlatformError(401, "credentials_required", "Provide a Bearer token or X-API-Key.")
 
 
+STAFF_ROLES = {
+    "admin",
+    "analyst",
+    "senior_analyst",
+    "reviewer",
+    "compliance_officer",
+    "viewer",
+    "auditor",
+}
+
+
 def require_role(*allowed_roles: str):
     def dependency(user: User = Depends(current_user)) -> User:
         if user.role not in allowed_roles:
@@ -165,6 +177,12 @@ def require_admin(user: User = Depends(current_user)) -> User:
 
 
 def require_analyst(user: User = Depends(current_user)) -> User:
-    if user.role not in {"analyst", "admin"}:
+    if user.role not in {"analyst", "senior_analyst", "reviewer", "compliance_officer", "admin"}:
         raise PlatformError(403, "analyst_required", "Analyst or administrator privileges required.")
+    return user
+
+
+def require_staff(user: User = Depends(current_user)) -> User:
+    if user.role not in STAFF_ROLES:
+        raise PlatformError(403, "staff_required", "Staff or administrator privileges required.")
     return user

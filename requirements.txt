@@ -1,0 +1,41 @@
+# Project ARGUS — Python Dependencies
+# Generated 2026-10-28. Install with: pip install -r requirements.txt
+
+# ── Web Framework ──────────────────────────────────────────────────────────────
+fastapi>=0.135
+uvicorn>=0.42
+python-multipart>=0.0.22
+
+# ── Data Layer ─────────────────────────────────────────────────────────────────
+SQLAlchemy>=2.0
+alembic>=1.18
+pydantic>=2.12
+pydantic-settings>=2.15
+
+# ── Security ───────────────────────────────────────────────────────────────────
+argon2-cffi>=25.1
+cryptography>=46.0
+
+# ── Document Forensics ─────────────────────────────────────────────────────────
+pillow>=12.1
+rapidocr-onnxruntime>=1.4
+onnxruntime>=1.25          # used by RapidOCR and InsightFace ONNX models
+onnx>=1.23                 # required by insightface
+insightface>=2.1           # ArcFace 512-d embeddings (Task 3.4)
+opencv-python>=5.0         # image decoding for InsightFace
+scikit-image>=0.25         # ELA and FFT forensic analysis
+qrcode>=8.2
+numpy>=2.0
+
+# ── Graph & Identity ───────────────────────────────────────────────────────────
+networkx>=3.6
+
+# ── Machine Learning ───────────────────────────────────────────────────────────
+lightgbm>=4.6
+scikit-learn>=1.8
+joblib>=1.5
+torch>=2.12
+chromadb>=1.5              # face deduplication index (Task 3.5, local in-process)
+
+# ── Demo & Evaluation ─────────────────────────────────────────────────────────
+streamlit>=1.66

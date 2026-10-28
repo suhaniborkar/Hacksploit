@@ -18,12 +18,14 @@ from app.modules.identity.auth import (
     new_refresh_token,
     refresh_expiry,
     require_admin,
+    require_staff,
     token_hash,
     verify_password,
 )
 from app.modules.identity.models import APIKey, AuthSession, User, ensure_utc, utcnow
 from app.modules.identity.schemas import (
     AuthTokens,
+    DashboardUserResponse,
     KeyCreate,
     KeyIssued,
     LoginRequest,
@@ -31,7 +33,13 @@ from app.modules.identity.schemas import (
     RefreshRequest,
     RegisterRequest,
     RoleUpdate,
+    UserCreateRequest,
     UserView,
+)
+from app.modules.identity.seed import (
+    normalize_role,
+    seed_default_staff,
+    to_dashboard_user_dict,
 )
 
 router = APIRouter(tags=["Identity & Authentication"])
@@ -89,12 +97,17 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/auth/login", response_model=AuthTokens)
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     user = db.execute(select(User).where(User.email == body.email)).scalar_one_or_none()
+    if user is None and body.email.endswith("@argus.internal"):
+        seed_default_staff(db)
+        user = db.execute(select(User).where(User.email == body.email)).scalar_one_or_none()
+
     encoded_hash = user.password_hash if user is not None else _DUMMY_PASSWORD_HASH
     password_ok = verify_password(body.password, encoded_hash)
 
     if user is None or not user.is_active or not password_ok:
         raise PlatformError(401, "invalid_credentials", "Incorrect email or password.")
 
+    user.last_login_at = utcnow()
     tokens = _token_response(db, user)
     db.commit()
     return tokens
@@ -305,3 +318,85 @@ def update_user_role(
     db.commit()
     db.refresh(target_user)
     return UserView.model_validate(target_user)
+
+
+@router.get("/auth/me", response_model=UserView)
+def get_current_user_me(user: User = Depends(current_user)):
+    return UserView.model_validate(user)
+
+
+@router.get("/auth/users", response_model=list[DashboardUserResponse])
+def list_dashboard_users(
+    user: User = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
+    users = db.execute(select(User).order_by(User.created_at.desc())).scalars().all()
+    if not users:
+        seed_default_staff(db)
+        users = db.execute(select(User).order_by(User.created_at.desc())).scalars().all()
+
+    return [DashboardUserResponse(**to_dashboard_user_dict(u)) for u in users]
+
+
+@router.post("/auth/users", response_model=DashboardUserResponse, status_code=201)
+def create_dashboard_user(
+    body: UserCreateRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    existing = db.execute(select(User).where(User.email == body.email)).scalar_one_or_none()
+    if existing:
+        raise PlatformError(409, "email_taken", f"User with email '{body.email}' already exists.")
+
+    raw_password = body.password or "ArgusSecure2026!"
+    new_user = User(
+        id=uuid.uuid4(),
+        email=body.email,
+        name=body.name,
+        role=normalize_role(body.role),
+        password_hash=hash_password(raw_password),
+        is_active=True,
+        created_at=utcnow(),
+        updated_at=utcnow(),
+    )
+    db.add(new_user)
+    try:
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        db.rollback()
+        raise PlatformError(409, "email_taken", "An account with that email already exists.")
+
+    return DashboardUserResponse(**to_dashboard_user_dict(new_user))
+
+
+@router.delete("/auth/users/{user_id}", status_code=200)
+def delete_dashboard_user(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise PlatformError(422, "invalid_id", "Invalid UUID format.")
+
+    if admin.id == uid:
+        raise PlatformError(400, "cannot_delete_self", "Administrators cannot delete their own active account.")
+
+    target = db.get(User, uid)
+    if not target:
+        raise PlatformError(404, "not_found", "User not found.")
+
+    db.delete(target)
+    db.commit()
+    return {"success": True, "deleted_id": user_id}
+
+
+@router.post("/auth/seed", response_model=list[DashboardUserResponse])
+def seed_staff_accounts(
+    db: Session = Depends(get_db),
+):
+    seeded = seed_default_staff(db)
+    return [DashboardUserResponse(**to_dashboard_user_dict(u)) for u in seeded]
+

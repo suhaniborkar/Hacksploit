@@ -3,10 +3,13 @@ from app.modules.forensics.image import (
     check_image_dimension_anomaly,
     check_jpeg_quality_factor_anomaly,
     compute_error_level_analysis,
-    compute_face_embedding_similarity,
     compute_fft_spectral_analysis,
     run_fast_plane_forensics,
     run_slow_plane_forensics,
+)
+from app.modules.forensics.face import (
+    compare_face_embeddings,
+    compute_face_embedding,
 )
 from app.modules.forensics.ocr import (
     FieldContradictionDetector,
@@ -34,6 +37,17 @@ from app.modules.forensics.schemas import (
     SecureQRVerificationResult,
 )
 
+from app.modules.forensics.face_index import (
+    FaceDeduplicationIndex,
+    create_face_reuse_edges,
+)
+from app.modules.forensics.contradiction import (
+    ContradictionCheck,
+    ContradictionReport,
+    CrossSourceContradictionDetector,
+)
+from app.core.forensics import FaceMatch
+
 __all__ = [
     "OCRExtractor",
     "FieldContradictionDetector",
@@ -54,11 +68,18 @@ __all__ = [
     "check_jpeg_quality_factor_anomaly",
     "compute_error_level_analysis",
     "compute_fft_spectral_analysis",
-    "compute_face_embedding_similarity",
+    "compare_face_embeddings",
+    "compute_face_embedding",
     "run_fast_plane_forensics",
     "run_slow_plane_forensics",
     "DynamicDocumentExtractor",
     "DocumentFeatureReport",
     "DocumentType",
+    "FaceDeduplicationIndex",
+    "FaceMatch",
+    "create_face_reuse_edges",
+    "CrossSourceContradictionDetector",
+    "ContradictionReport",
+    "ContradictionCheck",
 ]
 

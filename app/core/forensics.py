@@ -62,3 +62,21 @@ class ForensicExtractor(Protocol):
     def assess_tampering(self, document_bytes: bytes, mime_type: str) -> TamperingSignal:
         """Assesses document integrity, tampering artifacts, or digital signature status."""
         ...
+
+
+@dataclass
+class FaceMatch:
+    """Represents a matched face embedding from the deduplication index."""
+    applicant_id: str
+    distance: float
+    similarity: float
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "applicant_id": self.applicant_id,
+            "distance": round(self.distance, 4),
+            "similarity": round(self.similarity, 4),
+            "metadata": self.metadata,
+        }
+

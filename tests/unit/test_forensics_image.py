@@ -10,7 +10,6 @@ from app.modules.forensics.image import (
     check_image_dimension_anomaly,
     check_jpeg_quality_factor_anomaly,
     compute_error_level_analysis,
-    compute_face_embedding_similarity,
     compute_fft_spectral_analysis,
     run_fast_plane_forensics,
     run_slow_plane_forensics,
@@ -192,33 +191,9 @@ def test_fft_spectral_analysis():
     assert "spectral_peak_ratio" in sig_grid.details
 
 
-def test_face_embedding_similarity():
-    """
-    Verifies biometric face cosine similarity:
-    - Missing input -> EvidenceStatus.UNAVAILABLE.
-    - Matching faces -> EvidenceStatus.PRESENT with high similarity.
-    - Non-matching faces -> EvidenceStatus.ANOMALOUS with low similarity.
-    """
-    # 1. Missing inputs
-    sig_none = compute_face_embedding_similarity(None, None)
-    assert sig_none.status == EvidenceStatus.UNAVAILABLE
-
-    # 2. Matching face vectors
-    vec_a = [0.1, 0.4, 0.8, 0.2, 0.5, 0.9, 0.3, 0.7]
-    vec_b = [0.11, 0.39, 0.82, 0.19, 0.51, 0.89, 0.31, 0.69]  # Highly similar
-
-    sig_match = compute_face_embedding_similarity(vec_a, vec_b, similarity_threshold=0.85)
-    assert sig_match.status == EvidenceStatus.PRESENT
-    assert sig_match.details["faces_match"] is True
-    assert sig_match.score > 0.95
-
-    # 3. Non-matching face vectors (orthogonal / opposing)
-    vec_c = [0.9, -0.7, 0.1, -0.5, 0.8, -0.6, 0.2, -0.4]
-
-    sig_mismatch = compute_face_embedding_similarity(vec_a, vec_c, similarity_threshold=0.65)
-    assert sig_mismatch.status == EvidenceStatus.ANOMALOUS
-    assert sig_mismatch.details["faces_match"] is False
-    assert sig_mismatch.score < 0.65
+# NOTE: Face embedding tests have been moved to tests/unit/test_forensics_face.py
+# The old 64×64 pixel cosine similarity function (compute_face_embedding_similarity)
+# was removed in Task 3.4 and replaced with InsightFace ArcFace embeddings.
 
 
 def test_run_slow_plane_forensics():
