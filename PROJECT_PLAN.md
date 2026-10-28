@@ -43,7 +43,7 @@ reproducible adversarial robustness benchmarks.
 - [x] Phase 1 — Foundation & Platform Hardening (Zero-Broker, ArtifactStore, PII Security)
 - [x] Phase 2 — Relational Identity Graph & Bounded Ego-Network Engine
 - [x] Phase 3 — Document Forensics & Evidence Adapters (3.1–3.6 Complete)
-- [x] Phase 4 — Multi-Source Fusion & Machine Learning Model Contracts (4.1–4.2 Complete)
+- [x] Phase 4 — Multi-Source Fusion & Machine Learning Model Contracts (4.1–4.3 Complete)
 - [ ] Phase 5 — Continuous Monitoring & Case Investigation API
 - [ ] Phase 6 — Adversarial Robustness & Experimental Benchmark Suite
 - [x] Phase 7 — Unified Responsive Web Console & End-to-End Rehearsal (7.1 KYC Form Integration Complete)
@@ -79,7 +79,7 @@ reproducible adversarial robustness benchmarks.
 ### Phase 4 — Multi-Source Fusion & Machine Learning Model Contracts
 - [x] **4.1 Baseline M0 (Deterministic Rules)**: Rule-based screening engine covering identifier reuse, field mismatch, and velocity anomalies.
 - [x] **4.2 KYC Feature Vectorizer & Domain Adaptation**: Extract and serialize the authoritative 10-dimensional M3 feature vector (`X_M3`) from live KYC evidence (behavioral velocity, 2-hop ego-network risk, M0 rule score, OCR contradiction, Verhoeff/PAN checksum validity, ELA tampering, face cosine distance, and missingness indicators), decoupling fusion from e-commerce schemas.
-- [ ] **4.3 Proposed M3 Calibrated Multi-Source Fusion & Hard Override Engine**: Implement `ArgusM3FusionEngine` loading `m3_fusion.joblib` with calibrated operational thresholds (`APPROVE < 0.25`, `FLAG_REVIEW 0.25–0.75`, `REJECT ≥ 0.75`) and deterministic hard-override rejection for invalid statutory checksums (Verhoeff/PAN), synthetic C2PA AI generation, and unverified identity. Conforms to `FraudModel` protocol.
+- [x] **4.3 M3 Calibrated Multi-Source Fusion & Hard Override Engine**: Implemented `ArgusM3FusionEngine` in `app/modules/fusion/m3_model.py` loading `m3_fusion.joblib` (LightGBM Booster + IsotonicRegression). Three statutory hard-override gates (checksum, OCR mismatch ≤0.20, AI EXIF/dimension). Operational thresholds APPROVE<0.25, REVIEW 0.25–0.75, REJECT≥0.75. Lazy singleton loader, graceful M0 proxy fallback. Conforms to `FraudModel` protocol.
 
 ### Phase 5 — Continuous Monitoring & Case Investigation API
 - [ ] **5.1 Post-KYC Event Ingestion Pipeline**: Ingestion API for post-onboarding lifecycle events (`account_activated`, `device_changed`, `transaction_velocity_spike`).
@@ -107,37 +107,29 @@ reproducible adversarial robustness benchmarks.
 
 ## Current Task
 
-**Task ID:** 4.3
+**Task ID:** 6.1
 
-**Goal:** Implement `ArgusM3FusionEngine` loading `m3_fusion.joblib` (LightGBM Booster + Isotonic Calibration) with operational risk tiers and deterministic hard-override gates.
+**Goal:** Expose model benchmark metrics (PR-AUC, ROC-AUC, ablation lift, adversarial attack matrix, ECE, Brier score) from `benchmark_report.json` and real-time evaluation harness via `GET /api/v1/dashboard/benchmarks` and `POST /api/v1/dashboard/benchmarks/evaluate`.
 
-**Inputs:** `argus/New_models/m3_fusion.joblib`, `app/modules/fusion/features.py` (`M3FeatureVector`), `ARCHITECTURE.md` §2 (`FraudModel` protocol), `app/core/fusion.py`.
+**Inputs:** `argus/New_models/benchmark_report.json`, `app/modules/investigation/dashboard_router.py`, `ARCHITECTURE.md`.
 
-**Output:** `app/modules/fusion/m3_model.py`, `app/modules/fusion/__init__.py`, `tests/unit/test_fusion_m3.py`.
+**Output:** New benchmark endpoints in `dashboard_router.py`, schema additions to `app/modules/investigation/schemas.py`, `tests/unit/test_dashboard_benchmarks.py`.
 
 **Constraints:**
-- Conforms to `FraudModel` domain protocol: `predict_risk(features: ApplicationEvidence) -> RiskAssessment`.
-- Deterministic statutory hard-overrides execute first:
-  1. Failed statutory checksum (Verhoeff $D_5$ on Aadhaar, PAN format) $\implies$ immediate hard `REJECT (risk=1.0)`.
-  2. Severe OCR mismatch ($\le 0.20$) $\implies$ immediate hard `REJECT (risk=1.0)`.
-  3. C2PA synthetic AI generation flags $\implies$ immediate hard `REJECT (risk=1.0)`.
-- If no hard override triggers, passes `M3FeatureVector` into `m3_fusion.joblib` (LightGBM booster + isotonic calibrator).
-- Calibrated operational risk thresholds:
-  - `APPROVE`: calibrated score $< 0.25$
-  - `REVIEW`: calibrated score $0.25 \le \text{score} < 0.75$
-  - `REJECT`: calibrated score $\ge 0.75$
-- Returns structured reason attributions and component scores (`m1_prob`, `m2_prob`, `m0_score`).
-- Lazy singleton model loader with graceful fallback if `.joblib` is unavailable.
+- `GET /api/v1/dashboard/benchmarks` returns static metrics from `benchmark_report.json` (no live model call).
+- `POST /api/v1/dashboard/benchmarks/evaluate` optionally runs live scoring on a small probe set.
+- No new dependencies; uses existing `ArgusM3FusionEngine` and `DeterministicM0Model`.
+- Requires `analyst` or higher role (existing RBAC).
 
-**Verification:** Unit tests in `tests/unit/test_fusion_m3.py` asserting hard overrides reject immediately, clean vectors approve, edge cases evaluate deterministically, and execution time is sub-millisecond.
+**Verification:** Unit tests assert correct schema, data from report, and role gating.
 
-**Depends on:** 4.2 (complete)
+**Depends on:** 4.3 (complete), 8.2 (complete)
 
 ---
 
 ## Next Task
 
-**Task ID:** 6.1 — Benchmark Metrics & Evaluation Backend API (`GET /api/v1/dashboard/benchmarks`)
+**Task ID:** 8.6 — Model Benchmarks, Evals & Explainability Console (Dashboard Frontend)
 
 ---
 
@@ -152,6 +144,12 @@ reproducible adversarial robustness benchmarks.
 ---
 
 ## Log
+
+### 2026-10-29 — Task 4.3 complete (M3 Calibrated Multi-Source Fusion Engine)
+- Changed: Implemented `ArgusM3FusionEngine` in `app/modules/fusion/m3_model.py`. Lazy-singleton `_M3ModelLoader` loads `argus/New_models/m3_fusion.joblib` (LightGBM `Booster` + sklearn `IsotonicRegression`). Three deterministic statutory hard-override gates execute before any model call: (1) `id_checksum_valid=False` → REJECT 1.0 (`M3_HO_CHECKSUM_FAILED`); (2) `ocr_name_similarity ≤ 0.20` → REJECT 1.0 (`M3_HO_OCR_MISMATCH`); (3) `exif_status=ANOMALOUS` or `image_dimension_status=ANOMALOUS` → REJECT 1.0 (AI signature gates). Operational thresholds: APPROVE <0.25, REVIEW 0.25–0.75, REJECT ≥0.75. Graceful M0 proxy fallback on load failure. Exported `ArgusM3FusionEngine` and `MODEL_NAME` from `app/modules/fusion/__init__.py`. Fixed stale `s.confidence` reference in `app/modules/kyc/service.py` (should be `s.score`).
+- Files: `app/modules/fusion/m3_model.py` (new), `app/modules/fusion/__init__.py`, `app/modules/kyc/service.py`, `tests/unit/test_fusion_m3.py` (new), `PROJECT_PLAN.md`.
+- Verified: 25/25 new tests in `test_fusion_m3.py` passed (including real-model integration class); full suite **249/249 passed** in 22.71s; `ruff check` 0 errors.
+- Limitations: `_OCR_MISMATCH_HARD_REJECT=0.20` threshold is conservative — a full calibration study against labeled KYC data should tune this for operational deployment.
 
 ### 2026-10-29 — Task 8.5 complete (Full System Integration, Realistic Seed Scenarios, UI Cleanliness & End-to-End Rehearsal)
 - Changed: Completely purged all simulation/mock badges and copy across `kycform/` (`VerificationResultsPage.tsx`, `VerificationCheckList.tsx`, `ReviewForm.tsx`, `services/kycApi.ts`, `types/kyc.ts`). Changed `emptyBiometric.livenessMode` to `'live'`, removed `'simulated'` CheckStatus, and replaced old hackathon disclaimer notes with clean, official verification status copy. Audited `dashboard/` and confirmed 0 simulation buttons or mock banners. Built standalone idempotent scenario seeder `scripts/seed_demo_scenarios.py` generating 3 contrasting scenarios: Clean Genuine applicants (verified, score 0.04), AI Document Forgery attacks (C2PA GenAI manifest, pseudo-QR hallucination, score 0.98), and a Coordinated Multi-Source Synthetic Identity Ring (3 applicants sharing phone number, device fingerprint, and ArcFace biometric face reuse). Built automated end-to-end integration test suite `tests/unit/test_end_to_end_dashboard_flow.py` covering staff login, metrics aggregation, queue search/filters, forensic dossier detail, cluster detection, and case adjudication with audit trails. Fixed normalized risk score scaling bug in `serialize_application` (`score_pct = raw_score * 100.0 if raw_score <= 1.0 else raw_score`).
