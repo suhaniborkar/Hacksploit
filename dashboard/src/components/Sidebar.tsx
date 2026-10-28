@@ -5,7 +5,7 @@ import {
   BarChart2,
   AlertTriangle,
   Users,
-  Layers,
+  // Layers,
   ShieldCheck,
   X,
 } from 'lucide-react';
@@ -21,7 +21,7 @@ const NAV_ITEMS = [
   { to: '/analytics', label: 'Analytics & Reports', icon: BarChart2 },
   { to: '/fraud-intelligence', label: 'Fraud Intelligence', icon: AlertTriangle },
   { to: '/users', label: 'Users', icon: Users },
-  { to: '/showcase', label: 'Design System', icon: Layers },
+  // { to: '/showcase', label: 'Design System', icon: Layers }, // disabled from navigation
 ];
 
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {

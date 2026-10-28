@@ -8,7 +8,7 @@ import { ApplicationDetailPage } from './pages/ApplicationDetailPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { FraudIntelligencePage } from './pages/FraudIntelligencePage';
 import { UsersPage } from './pages/UsersPage';
-import { ComponentShowcase } from './pages/ComponentShowcase';
+// import { ComponentShowcase } from './pages/ComponentShowcase';
 import './styles/dashboard.css';
 
 function ProtectedLayout() {
@@ -27,7 +27,7 @@ function ProtectedLayout() {
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/fraud-intelligence" element={<FraudIntelligencePage />} />
         <Route path="/users" element={<UsersPage />} />
-        <Route path="/showcase" element={<ComponentShowcase />} />
+        {/* <Route path="/showcase" element={<ComponentShowcase />} /> */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
