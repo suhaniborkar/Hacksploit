@@ -196,17 +196,22 @@ export function DocumentUploadForm({ onNext, onBack }: DocumentFormProps) {
 
         <FormField
           label="Document Number"
-          required
-          error={errors.documentNumber?.message}
+          required={selectedType !== 'driving_licence'}
+          error={selectedType !== 'driving_licence' ? errors.documentNumber?.message : undefined}
           htmlFor="documentNumber"
         >
           <input
             id="documentNumber"
             type="text"
-            className={`form-input ${errors.documentNumber ? 'input-error' : ''}`}
-            placeholder="e.g. 4597 1693 9274 or ABCDE1234F"
+            disabled={selectedType === 'driving_licence'}
+            className={`form-input ${errors.documentNumber && selectedType !== 'driving_licence' ? 'input-error' : ''}`}
+            placeholder={
+              selectedType === 'driving_licence'
+                ? 'Not applicable for Driving Licence'
+                : 'e.g. 4597 1693 9274 or ABCDE1234F'
+            }
             {...register('documentNumber', {
-              required: 'Document number is required.',
+              required: selectedType !== 'driving_licence' ? 'Document number is required.' : false,
             })}
           />
         </FormField>

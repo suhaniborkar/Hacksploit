@@ -4,17 +4,6 @@ import { useKYC } from '../../context/KYCContext';
 import { FormField } from '../shared/FormField';
 import type { ContactInfo, AddressInfo } from '../../types/kyc';
 
-const COUNTRIES = [
-  { value: 'IN', label: 'India' },
-  { value: 'US', label: 'United States' },
-  { value: 'GB', label: 'United Kingdom' },
-  { value: 'AU', label: 'Australia' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'SG', label: 'Singapore' },
-  { value: 'AE', label: 'United Arab Emirates' },
-  { value: 'other', label: 'Other' },
-];
-
 interface FormValues extends ContactInfo {
   residential: AddressInfo;
   permanentSameAsResidential: boolean;
@@ -131,27 +120,6 @@ function AddressFields({
         />
       </FormField>
 
-      <FormField
-        label="Country"
-        required={required}
-        error={e?.country?.message}
-        htmlFor={`${prefix}-country`}
-      >
-        <select
-          id={`${prefix}-country`}
-          className={`form-input ${e?.country ? 'input-error' : ''}`}
-          {...register(`${prefix}.country` as keyof FormValues, {
-            required: required ? 'Country is required.' : false,
-          })}
-        >
-          <option value="">— Select country —</option>
-          {COUNTRIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-      </FormField>
     </div>
   );
 }
@@ -176,7 +144,10 @@ export function ContactAddressForm({ onNext, onBack }: ContactAddressFormProps) 
     defaultValues: {
       mobile: application.contact.mobile,
       email: application.contact.email,
-      residential: application.address.residential,
+      residential: {
+        ...application.address.residential,
+        country: application.address.residential.country || 'India',
+      },
       permanentSameAsResidential: application.address.permanentSameAsResidential,
       permanent: application.address.permanent ?? {
         line1: '',
@@ -184,7 +155,7 @@ export function ContactAddressForm({ onNext, onBack }: ContactAddressFormProps) 
         city: '',
         stateRegion: '',
         postalCode: '',
-        country: '',
+        country: 'India',
       },
     },
   });
@@ -193,7 +164,10 @@ export function ContactAddressForm({ onNext, onBack }: ContactAddressFormProps) 
     reset({
       mobile: application.contact.mobile,
       email: application.contact.email,
-      residential: application.address.residential,
+      residential: {
+        ...application.address.residential,
+        country: application.address.residential.country || 'India',
+      },
       permanentSameAsResidential: application.address.permanentSameAsResidential,
       permanent: application.address.permanent ?? {
         line1: '',
@@ -201,7 +175,7 @@ export function ContactAddressForm({ onNext, onBack }: ContactAddressFormProps) 
         city: '',
         stateRegion: '',
         postalCode: '',
-        country: '',
+        country: 'India',
       },
     });
   }, []);
@@ -209,9 +183,17 @@ export function ContactAddressForm({ onNext, onBack }: ContactAddressFormProps) 
   const onSubmit = (data: FormValues) => {
     updateContact({ mobile: data.mobile, email: data.email });
     updateAddress({
-      residential: data.residential,
+      residential: {
+        ...data.residential,
+        country: data.residential.country || 'India',
+      },
       permanentSameAsResidential: sameAddress,
-      permanent: sameAddress ? undefined : data.permanent,
+      permanent: sameAddress
+        ? undefined
+        : {
+            ...data.permanent,
+            country: data.permanent.country || 'India',
+          },
     });
     onNext();
   };
