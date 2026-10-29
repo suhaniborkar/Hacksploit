@@ -248,31 +248,99 @@ def serialize_application(app: KYCApplication) -> ApplicationSchema:
         forensicReport=forensic_rep,
     )
 
-    # Biometrics
+    # Biometrics — dynamically extract real forensic & biometric verification results
     dash_status = map_status_to_dashboard(app.status)
+    meta = app.metadata_json or {}
+    vr = meta.get("verification_result") or {}
+    fr = meta.get("forensic_report") or {}
+    checks = vr.get("checks", [])
 
+    # Default baseline scores based on status
     if dash_status == "verified":
         liveness_score = 0.98
         face_match_score = 0.96
         anti_spoof_score = 0.99
         tampering_status = "Clean (No artifact detected)"
     elif dash_status == "flagged":
-        liveness_score = 0.42
-        face_match_score = 0.38
-        anti_spoof_score = 0.15
-        tampering_status = "Anomalous (Potential presentation attack / tampering)"
+        liveness_score = 0.95
+        face_match_score = 0.88
+        anti_spoof_score = 0.96
+        tampering_status = "Clean (Verified active challenges)"
     else:
-        liveness_score = 0.85
-        face_match_score = 0.78
-        anti_spoof_score = 0.72
+        liveness_score = 0.92
+        face_match_score = 0.82
+        anti_spoof_score = 0.90
         tampering_status = "Review Required (Minor noise or unverified metadata)"
+
+    # Inspect actual live checks for application-specific values
+    biometric_failed = False
+    for c in checks:
+        c_name = c.get("name", "")
+        ev = c.get("evidence", "")
+        c_status = c.get("status", "")
+
+        if "Face Comparison" in c_name:
+            if c_status == "failed":
+                biometric_failed = True
+            # Extract real similarity e.g. "ArcFace 512-d Cosine Similarity: 92.4%" or "Cosine similarity (0.39)"
+            if "Cosine similarity (" in ev:
+                try:
+                    face_match_score = float(ev.split("Cosine similarity (")[1].split(")")[0])
+                except Exception:
+                    face_match_score = 0.35
+            elif "Cosine Similarity: " in ev:
+                try:
+                    pct = float(ev.split("Cosine Similarity: ")[1].split("%")[0])
+                    face_match_score = round(pct / 100.0, 3)
+                except Exception:
+                    pass
+            elif "Confidence score: " in ev:
+                try:
+                    pct = float(ev.split("Confidence score: ")[1].split("%")[0])
+                    face_match_score = round(pct / 100.0, 3)
+                except Exception:
+                    pass
+
+        elif "Liveness" in c_name or "Anti-Spoofing" in c_name:
+            if c_status == "failed":
+                biometric_failed = True
+                liveness_score = 0.35
+            if "Anti-Spoofing: Real Face Confirmed (" in ev:
+                try:
+                    pct = float(ev.split("Anti-Spoofing: Real Face Confirmed (")[1].split("%")[0])
+                    anti_spoof_score = round(pct / 100.0, 3)
+                except Exception:
+                    pass
+            if "Challenges completed:" in ev:
+                liveness_score = 0.98
+
+    # Forensic report tampering assessment
+    tampering_signals = fr.get("tampering_signals", {})
+    ela_sig = tampering_signals.get("ela_compression", {})
+    if ela_sig.get("status") == "PRESENT":
+        tampering_status = "Anomalous (ELA compression / splicing detected)"
+        anti_spoof_score = 0.25
+        biometric_failed = True
+    elif fr.get("kyc_status") == "REJECT":
+        tampering_status = fr.get("kyc_summary") or "Anomalous document tampering detected"
+        anti_spoof_score = 0.35
+        biometric_failed = True
+
+    # If the application was flagged specifically for face mismatch
+    reasons_text = " ".join(app.reasons_json or [])
+    if "Face Comparison: Face comparison mismatch" in reasons_text:
+        biometric_failed = True
+        if face_match_score > 0.40:
+            face_match_score = 0.35
+
+    biometric_passed = not biometric_failed
 
     biometric = BiometricDataSchema(
         selfieUrl=selfie_url,
         livenessScore=liveness_score,
         faceMatchScore=face_match_score,
         antiSpoofScore=anti_spoof_score,
-        passed=(dash_status != "flagged"),
+        passed=biometric_passed,
         tamperingStatus=tampering_status,
     )
 

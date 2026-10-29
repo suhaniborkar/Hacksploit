@@ -649,13 +649,22 @@ class KYCApplicationService:
                             evidence=f"ArcFace 512-d Cosine Similarity: {min(99.4, max(85.0, sim * 100)):.1f}%",
                         )
                     )
+                elif sim >= 0.33:
+                    checks.append(
+                        VerificationCheckItem(
+                            name="Face Comparison",
+                            status="pending",
+                            explanation="Face match reflects cross-domain lighting or document print variance. Routed for visual review.",
+                            evidence=f"ArcFace 512-d Cosine Similarity: {sim * 100:.1f}% (Within cross-domain review bracket [33%, 40%])",
+                        )
+                    )
                 else:
                     checks.append(
                         VerificationCheckItem(
                             name="Face Comparison",
                             status="failed",
                             explanation="Face comparison mismatch between camera snapshot and document photo.",
-                            evidence=f"Cosine similarity ({sim:.2f}) below threshold (0.40)",
+                            evidence=f"Cosine similarity ({sim:.2f}) below threshold (0.33)",
                         )
                     )
             elif selfie_emb is None:

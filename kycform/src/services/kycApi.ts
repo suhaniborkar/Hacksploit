@@ -140,6 +140,22 @@ export async function submitLivenessEvidence(
   }
 }
 
+function getDeviceFingerprint(): string {
+  try {
+    const key = 'veri_device_fp';
+    let fp = sessionStorage.getItem(key);
+    if (!fp) {
+      const rnd = Math.random().toString(36).substring(2, 9);
+      const ua = (navigator.userAgent || 'unknown').replace(/\W+/g, '').substring(0, 16);
+      fp = `dev_${ua}_${Date.now().toString(36)}_${rnd}`;
+      sessionStorage.setItem(key, fp);
+    }
+    return fp;
+  } catch {
+    return `dev_canvas_${Date.now().toString(36)}`;
+  }
+}
+
 /**
  * Submits the KYC application to the backend.
  * Transmits all personal, contact, address, document upload, biometric, and declaration fields.
@@ -155,7 +171,7 @@ export async function submitKYCApplication(
       document: application.document,
       biometric: application.biometric,
       declarations: application.declarations,
-      device_fingerprint: `canvas_${navigator.userAgent.replace(/\W+/g, '').substring(0, 32)}`,
+      device_fingerprint: getDeviceFingerprint(),
       client_metadata: {
         userAgent: navigator.userAgent,
         language: navigator.language,
