@@ -147,7 +147,18 @@ export function DocumentUploadForm({ onNext, onBack }: DocumentFormProps) {
 
   const onSubmit = (data: DocumentUpload) => {
     if (!validate(data)) return;
-    updateDocument(data);
+    const frontImg = application.document.frontImagePreview || data.frontImagePreview || getValues('frontImagePreview');
+    const frontRef = application.document.frontImageRef || data.frontImageRef || getValues('frontImageRef');
+    const backImg = application.document.backImagePreview || data.backImagePreview || getValues('backImagePreview');
+    const backRef = application.document.backImageRef || data.backImageRef || getValues('backImageRef');
+
+    updateDocument({
+      ...data,
+      frontImageRef: frontRef,
+      frontImagePreview: frontImg,
+      backImageRef: backRef,
+      backImagePreview: backImg,
+    });
     onNext();
   };
 
@@ -255,11 +266,13 @@ export function DocumentUploadForm({ onNext, onBack }: DocumentFormProps) {
             <FileUpload
               label="Front of Document"
               side="front"
-              preview={application.document.frontImagePreview}
+              preview={application.document.frontImagePreview || getValues('frontImagePreview')}
               required
               error={frontError}
               onFileSelected={(file, dataUrl) => {
                 setFrontError('');
+                setValue('frontImageRef', file.name);
+                setValue('frontImagePreview', dataUrl);
                 updateDocument({
                   frontImageRef: file.name,
                   frontImagePreview: dataUrl,
@@ -267,6 +280,8 @@ export function DocumentUploadForm({ onNext, onBack }: DocumentFormProps) {
                 runDocumentAnalysis(dataUrl, selectedType, getValues('documentNumber'));
               }}
               onRemove={() => {
+                setValue('frontImageRef', undefined);
+                setValue('frontImagePreview', undefined);
                 updateDocument({ frontImageRef: undefined, frontImagePreview: undefined });
                 setAnalysis(null);
               }}
@@ -276,19 +291,23 @@ export function DocumentUploadForm({ onNext, onBack }: DocumentFormProps) {
               <FileUpload
                 label="Back of Document"
                 side="back"
-                preview={application.document.backImagePreview}
+                preview={application.document.backImagePreview || getValues('backImagePreview')}
                 required
                 error={backError}
                 onFileSelected={(file, dataUrl) => {
                   setBackError('');
+                  setValue('backImageRef', file.name);
+                  setValue('backImagePreview', dataUrl);
                   updateDocument({
                     backImageRef: file.name,
                     backImagePreview: dataUrl,
                   });
                 }}
-                onRemove={() =>
-                  updateDocument({ backImageRef: undefined, backImagePreview: undefined })
-                }
+                onRemove={() => {
+                  setValue('backImageRef', undefined);
+                  setValue('backImagePreview', undefined);
+                  updateDocument({ backImageRef: undefined, backImagePreview: undefined });
+                }}
               />
             )}
           </div>

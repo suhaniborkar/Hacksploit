@@ -63,10 +63,18 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateDocument = useCallback((data: Partial<DocumentUpload>) => {
-    setApplication((prev) => ({
-      ...prev,
-      document: { ...prev.document, ...data },
-    }));
+    setApplication((prev) => {
+      const cleanData: Partial<DocumentUpload> = {};
+      (Object.keys(data) as (keyof DocumentUpload)[]).forEach((key) => {
+        if (data[key] !== undefined) {
+          cleanData[key] = data[key] as any;
+        }
+      });
+      return {
+        ...prev,
+        document: { ...prev.document, ...cleanData },
+      };
+    });
   }, []);
 
   const updateBiometric = useCallback((data: Partial<BiometricInfo>) => {

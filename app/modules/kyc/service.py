@@ -22,6 +22,7 @@ from app.core.security import hash_pii
 from app.infrastructure.jobs.registry import ExecutionContext, default_registry
 from app.infrastructure.jobs.service import enqueue_job
 from app.infrastructure.storage.artifact_store import ArtifactStore, LocalDiskArtifactStore
+from app.modules.forensics.classifier import INDIAN_STATE_CODES
 from app.modules.forensics.contradiction import CrossSourceContradictionDetector
 from app.modules.forensics.face import compute_face_embedding
 from app.modules.forensics.face_index import FaceDeduplicationIndex
@@ -397,7 +398,7 @@ class KYCApplicationService:
 
         # Analyze document using DynamicDocumentExtractor (OCR, Verhoeff, C2PA Provenance, ELA)
         forensic_report_dict = None
-        if front_bytes and len(front_bytes) > 0:
+        if payload.document.frontImagePreview and front_bytes and len(front_bytes) > 0:
             try:
                 from app.modules.forensics.classifier import DynamicDocumentExtractor
                 extractor = DynamicDocumentExtractor()
@@ -548,7 +549,20 @@ class KYCApplicationService:
                 doc_format_valid = False
                 doc_err = "Passport number must begin with a letter followed by 7 digits."
         elif doc_type_clean == "driving_licence":
-            if not re.match(r"^[A-Z]{2}[0-9]{13,14}$", doc_number.upper()):
+            clean_dl = re.sub(r"[^A-Z0-9]", "", doc_number.upper())
+            if (not clean_dl or clean_dl.startswith("DOC")) and forensic_report_dict and forensic_report_dict.get("extracted_id_number"):
+                clean_dl = re.sub(r"[^A-Z0-9]", "", forensic_report_dict["extracted_id_number"].upper())
+            if clean_dl and len(clean_dl) >= 4:
+                id_last4 = clean_dl[-4:]
+
+            is_valid_dl = (
+                len(clean_dl) >= 13
+                and clean_dl[:2] in INDIAN_STATE_CODES
+            )
+            if forensic_report_dict and forensic_report_dict.get("checksum_valid"):
+                is_valid_dl = True
+
+            if not is_valid_dl:
                 doc_format_valid = False
                 doc_err = "Driving licence must start with 2-letter state code followed by 13-14 digits."
 
@@ -633,6 +647,10 @@ class KYCApplicationService:
             doc_emb = None
             try:
                 doc_emb = compute_face_embedding(front_bytes)
+                if doc_emb is None and forensic_report_dict and forensic_report_dict.get("extracted_face_preview"):
+                    crop_bytes, _ = _decode_data_url(forensic_report_dict["extracted_face_preview"])
+                    if crop_bytes:
+                        doc_emb = compute_face_embedding(crop_bytes)
             except Exception:
                 pass
 

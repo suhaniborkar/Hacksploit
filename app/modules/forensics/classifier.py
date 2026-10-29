@@ -283,6 +283,7 @@ class DynamicDocumentExtractor:
             DocumentType.DRIVING_LICENCE: 0.0,
             DocumentType.PASSPORT: 0.0,
             DocumentType.REGULAR_ID_OR_OTHER: 0.0,
+            DocumentType.UNKNOWN: 0.0,
         }
         anchors: dict[DocumentType, list[str]] = {dt: [] for dt in scores}
 
@@ -592,7 +593,7 @@ class DynamicDocumentExtractor:
             document_type=best_type,
             type_confidence=best_score,
             is_statutory_kyc_document=is_statutory,
-            differentiating_anchors=anchors[best_type],
+            differentiating_anchors=anchors.get(best_type, []),
             id_number=id_number,
             id_format_valid=id_format_valid,
             checksum_or_rule_valid=checksum_valid,

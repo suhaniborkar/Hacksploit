@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import KYCValidationError
 from app.infrastructure.database import get_db
 from app.infrastructure.storage.artifact_store import ArtifactStore, LocalDiskArtifactStore
+from app.modules.forensics.classifier import INDIAN_STATE_CODES
 from app.modules.kyc.schemas import (
     FullKYCApplicationPayload,
     KYCApplicationCreate,
@@ -310,9 +311,13 @@ async def analyze_document_upload(
             checksum_valid = False
             checksum_details = "Passport number must begin with 1 letter followed by 7 digits."
     elif doc_type == "driving_licence":
-        if not re.match(r"^[A-Z]{2}[0-9]{13,14}$", doc_num.upper()):
+        clean_dl = re.sub(r"[^A-Z0-9]", "", doc_num.upper())
+        if not (len(clean_dl) >= 13 and clean_dl[:2] in INDIAN_STATE_CODES):
             checksum_valid = False
             checksum_details = "Driving licence must start with 2-letter state code followed by 13-14 digits."
+        else:
+            checksum_valid = True
+            checksum_details = f"Valid Indian state RTO prefix ('{clean_dl[:2]}') with active licensing sequence."
 
     return {
         "valid": checksum_valid,

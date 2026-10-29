@@ -275,9 +275,9 @@ def serialize_application(app: KYCApplication) -> ApplicationSchema:
     # Inspect actual live checks for application-specific values
     biometric_failed = False
     for c in checks:
-        c_name = c.get("name", "")
-        ev = c.get("evidence", "")
-        c_status = c.get("status", "")
+        c_name = str(c.get("name") or "")
+        ev = str(c.get("evidence") or "")
+        c_status = str(c.get("status") or "")
 
         if "Face Comparison" in c_name:
             if c_status == "failed":

@@ -168,6 +168,34 @@ class FaceDeduplicationIndex:
         matches.sort(key=lambda m: m.distance)
         return matches[:top_k]
 
+    def search(
+        self,
+        embedding: np.ndarray | list[float],
+        applicant_id: str | None = None,
+        top_k: int = DEFAULT_TOP_K,
+        distance_threshold: float = DEFAULT_DISTANCE_THRESHOLD,
+    ) -> list[FaceMatch]:
+        """Convenience alias for find_matching_faces."""
+        return self.find_matching_faces(
+            embedding=embedding,
+            top_k=top_k,
+            distance_threshold=distance_threshold,
+            exclude_applicant_id=applicant_id,
+        )
+
+    def index_face(
+        self,
+        applicant_id: str,
+        embedding: np.ndarray | list[float],
+        metadata: dict[str, Any] | None = None,
+    ) -> bool:
+        """Convenience alias for upsert_face_embedding."""
+        return self.upsert_face_embedding(
+            applicant_id=applicant_id,
+            embedding=embedding,
+            metadata=metadata,
+        )
+
     def find_matches_for_applicant(
         self,
         applicant_id: str,
