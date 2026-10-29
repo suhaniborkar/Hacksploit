@@ -45,7 +45,7 @@ export type MaritalStatus = 'single' | 'married' | 'divorced' | 'widowed' | 'oth
 export interface PersonalInfo {
   fullName: string;
   dateOfBirth: string; // ISO date YYYY-MM-DD
-  nationality: Nationality | '';
+  nationality?: Nationality | '';
   residencyStatus: ResidencyStatus | '';
   fathersName?: string;
   mothersName?: string;
@@ -75,13 +75,7 @@ export interface AddressSection {
   permanent?: AddressInfo;
 }
 
-export type DocumentType =
-  | 'pan'
-  | 'passport'
-  | 'driving_licence'
-  | 'voter_id'
-  | 'aadhaar'
-  | 'other';
+export type DocumentType = 'pan' | 'aadhaar' | 'driving_licence';
 
 export interface DocumentUpload {
   documentType: DocumentType | '';

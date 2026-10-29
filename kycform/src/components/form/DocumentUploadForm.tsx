@@ -7,12 +7,9 @@ import { FileUpload } from '../shared/FileUpload';
 import type { DocumentUpload, DocumentType } from '../../types/kyc';
 
 const DOCUMENT_TYPES: { value: DocumentType; label: string; hasBack: boolean; hasExpiry: boolean }[] = [
-  { value: 'aadhaar', label: 'Aadhaar Card', hasBack: true, hasExpiry: false },
   { value: 'pan', label: 'PAN Card', hasBack: false, hasExpiry: false },
-  { value: 'passport', label: 'Passport', hasBack: false, hasExpiry: true },
+  { value: 'aadhaar', label: 'Aadhaar Card', hasBack: true, hasExpiry: false },
   { value: 'driving_licence', label: 'Driving Licence', hasBack: true, hasExpiry: true },
-  { value: 'voter_id', label: 'Voter ID', hasBack: true, hasExpiry: false },
-  { value: 'other', label: 'Other Statutory Identity', hasBack: true, hasExpiry: true },
 ];
 
 interface DocumentFormProps {

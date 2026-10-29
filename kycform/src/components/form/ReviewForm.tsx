@@ -59,14 +59,10 @@ function AddressBlock({ address }: { address: import('../../types/kyc').AddressI
   );
 }
 
-const NATIONALITY_LABELS: Record<string, string> = {
-  IN: 'Indian', US: 'American', GB: 'British', AU: 'Australian',
-  CA: 'Canadian', SG: 'Singaporean', AE: 'Emirati', other: 'Other',
-};
-
 const DOC_LABELS: Record<string, string> = {
-  pan: 'PAN Card', passport: 'Passport', driving_licence: 'Driving Licence',
-  voter_id: 'Voter ID', aadhaar: 'Aadhaar Card', other: 'Other',
+  pan: 'PAN Card',
+  aadhaar: 'Aadhaar Card',
+  driving_licence: 'Driving Licence',
 };
 
 const OCC_LABELS: Record<string, string> = {
@@ -111,7 +107,6 @@ export function ReviewForm({ onBack }: ReviewFormProps) {
       <ReviewSection title="Personal Information" step="personal">
         <Row label="Full Name" value={personal.fullName} />
         <Row label="Date of Birth" value={personal.dateOfBirth} />
-        <Row label="Nationality" value={NATIONALITY_LABELS[personal.nationality] ?? personal.nationality} />
         <Row label="Residency Status" value={personal.residencyStatus?.replace('_', ' ')} />
         {personal.fathersName && <Row label="Father's Name" value={personal.fathersName} />}
         {personal.mothersName && <Row label="Mother's Name" value={personal.mothersName} />}

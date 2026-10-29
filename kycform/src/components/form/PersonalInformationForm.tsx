@@ -2,18 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useKYC } from '../../context/KYCContext';
 import { FormField } from '../shared/FormField';
-import type { PersonalInfo, Nationality, ResidencyStatus, Gender, MaritalStatus } from '../../types/kyc';
-
-const NATIONALITIES: { value: Nationality; label: string }[] = [
-  { value: 'IN', label: 'Indian' },
-  { value: 'US', label: 'American' },
-  { value: 'GB', label: 'British' },
-  { value: 'AU', label: 'Australian' },
-  { value: 'CA', label: 'Canadian' },
-  { value: 'SG', label: 'Singaporean' },
-  { value: 'AE', label: 'Emirati' },
-  { value: 'other', label: 'Other' },
-];
+import type { PersonalInfo, ResidencyStatus, Gender, MaritalStatus } from '../../types/kyc';
 
 const RESIDENCY_STATUSES: { value: ResidencyStatus; label: string }[] = [
   { value: 'citizen', label: 'Citizen' },
@@ -125,25 +114,6 @@ export function PersonalInformationForm({ onNext, onBack }: PersonalFormProps) {
           />
         </FormField>
 
-        <FormField
-          label="Nationality"
-          required
-          error={errors.nationality?.message}
-          htmlFor="nationality"
-        >
-          <select
-            id="nationality"
-            className={`form-input ${errors.nationality ? 'input-error' : ''}`}
-            {...register('nationality', { required: 'Please select your nationality.' })}
-          >
-            <option value="">— Select nationality —</option>
-            {NATIONALITIES.map((n) => (
-              <option key={n.value} value={n.value}>
-                {n.label}
-              </option>
-            ))}
-          </select>
-        </FormField>
 
         <FormField
           label="Residency Status"
