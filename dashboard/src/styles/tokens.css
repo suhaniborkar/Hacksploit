@@ -25,14 +25,14 @@
   --badge-flagged-bg: rgba(254, 226, 226, 0.85);
   --badge-review-bg: rgba(243, 244, 246, 0.90);
 
-  /* Layout Dimensions (Proportionally scaled ~10% down) */
-  --dash-sidebar-w: 225px;
-  --dash-topbar-h: 56px;
+  /* Layout Dimensions (Scaled +15%) */
+  --dash-sidebar-w: 260px;
+  --dash-topbar-h: 64px;
 
   /* Border Radii */
-  --dash-radius-sm: 5px;
-  --dash-radius-md: 8px;
-  --dash-radius-lg: 12px;
+  --dash-radius-sm: 6px;
+  --dash-radius-md: 9px;
+  --dash-radius-lg: 14px;
   --dash-radius-pill: 9999px;
 
   /* Shadows */

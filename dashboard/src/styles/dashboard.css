@@ -5,6 +5,11 @@
    Proportionally Reduced Text Size (-15%) & Component Dimensions (-10%)
    ======================================================================== */
 
+html {
+  font-size: 18.4px; /* 16px * 1.15 (+15% scale across fonts & rem components) */
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

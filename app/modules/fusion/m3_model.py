@@ -95,9 +95,10 @@ class _M3ModelLoader:
                 cls._instance = obj
             return cls._instance  # type: ignore[return-value]
 
-    def _load(self, model_path: Path) -> None:
-        if not model_path.exists():
-            self._load_error = f"Model file not found: {model_path}"
+    def _load(self, model_path: Path | str) -> None:
+        p = Path(model_path)
+        if not p.exists():
+            self._load_error = f"Model file not found: {p}"
             logger.warning(
                 "%s — M3 fusion engine will degrade to rule-based scoring.",
                 self._load_error,
